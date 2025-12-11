@@ -1,4 +1,4 @@
-import SamplePage from './pages/SamplePage';
+import WorkHoursTracker from './pages/WorkHoursTracker';
 import type { ReactNode } from 'react';
 
 interface RouteConfig {
@@ -10,9 +10,9 @@ interface RouteConfig {
 
 const routes: RouteConfig[] = [
   {
-    name: 'Sample Page',
+    name: '工时统计',
     path: '/',
-    element: <SamplePage />
+    element: <WorkHoursTracker />
   }
 ];
 
