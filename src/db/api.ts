@@ -286,11 +286,20 @@ export async function getWeeklyStats() {
 
   const attendanceData = Array.isArray(data) ? data : [];
 
-  // 生成周一到周五的完整数据
+  // 根据当前日期动态展示统计范围
+  // 周一至周四显示周一到当天
+  // 周五、周六、周日显示周一到周五
+  let displayDays = 5; // 默认显示5天
+  if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+    // 周一到周四，只显示到当天
+    displayDays = dayOfWeek;
+  }
+
+  // 生成数据
   const weekDays = ['周一', '周二', '周三', '周四', '周五'];
   const dailyHours = [];
 
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < displayDays; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
     const dateStr = date.toISOString().split('T')[0];
@@ -317,9 +326,9 @@ export async function getWeeklyStats() {
     });
   }
 
-  // 计算总工时和平均工时
+  // 计算总工时和平均工时（根据实际显示的天数计算）
   const totalHours = dailyHours.reduce((sum, day) => sum + day.hours, 0);
-  const averageHours = totalHours / 5;
+  const averageHours = displayDays > 0 ? totalHours / displayDays : 0;
 
   return {
     totalHours: Number(totalHours.toFixed(2)),

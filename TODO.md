@@ -59,3 +59,8 @@
   - 清理了 Vite 缓存
   - 确认代码中已正确使用 handleResetClockIn 和 handleResetClockOut
   - 通过 lint 检查
+- [x] 修复柱状图显示范围错误
+  - 周一至周四：只显示周一到当天
+  - 周五、周六、周日：显示周一到周五
+  - 平均工时根据实际显示天数计算
+  - 通过 lint 检查
