@@ -2,10 +2,20 @@ import { supabase } from './supabase';
 import type { Attendance } from '@/types';
 
 /**
+ * 格式化本地日期为 YYYY-MM-DD 格式（避免时区转换问题）
+ */
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * 获取今日签到记录
  */
 export async function getTodayAttendance(): Promise<Attendance | null> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
   
   const { data, error } = await supabase
     .from('attendance')
@@ -25,7 +35,7 @@ export async function getTodayAttendance(): Promise<Attendance | null> {
  * 上班签到
  */
 export async function clockIn(): Promise<Attendance> {
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
   const now = new Date().toISOString();
 
   // 检查今日是否已签到
@@ -258,7 +268,7 @@ export async function getWeeklyStats() {
   const now = new Date();
   const dayOfWeek = now.getDay();
   
-  // 计算本周一的日期
+  // 计算本周一的日期（使用本地时区）
   const monday = new Date(now);
   const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // 如果是周日，往回推6天
   monday.setDate(now.getDate() + diff);
@@ -269,8 +279,8 @@ export async function getWeeklyStats() {
   friday.setDate(monday.getDate() + 4);
   friday.setHours(23, 59, 59, 999);
 
-  const mondayStr = monday.toISOString().split('T')[0];
-  const fridayStr = friday.toISOString().split('T')[0];
+  const mondayStr = formatLocalDate(monday);
+  const fridayStr = formatLocalDate(friday);
 
   const { data, error } = await supabase
     .from('attendance')
@@ -302,7 +312,7 @@ export async function getWeeklyStats() {
   for (let i = 0; i < displayDays; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = formatLocalDate(date);
 
     const record = attendanceData.find(r => r.date === dateStr);
     
