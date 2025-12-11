@@ -53,3 +53,9 @@
 - 历史记录查看（分页展示，支持 10/20/50 条每页）
 - 独立重置功能（分别重置上班和下班签到，带确认对话框）
 - 页面标题：牛马拉磨统计
+
+## 错误修复
+- [x] 修复 handleReset 未定义错误
+  - 清理了 Vite 缓存
+  - 确认代码中已正确使用 handleResetClockIn 和 handleResetClockOut
+  - 通过 lint 检查
