@@ -2,11 +2,22 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Clock, LogIn, LogOut, TrendingUp } from 'lucide-react';
-import { clockIn, clockOut, getTodayAttendance, getWeeklyStats } from '@/db/api';
+import { Clock, LogIn, LogOut, TrendingUp, RotateCcw } from 'lucide-react';
+import { clockIn, clockOut, getTodayAttendance, getWeeklyStats, resetTodayAttendance } from '@/db/api';
 import type { Attendance, WeeklyStats } from '@/types';
 import AttendanceHistory from '@/components/AttendanceHistory';
 
@@ -89,6 +100,27 @@ export default function WorkHoursTracker() {
     }
   };
 
+  // 处理重置签到
+  const handleReset = async () => {
+    setLoading(true);
+    try {
+      await resetTodayAttendance();
+      await loadData();
+      toast({
+        title: '重置成功',
+        description: '今日签到记录已清除',
+      });
+    } catch (error) {
+      toast({
+        title: '重置失败',
+        description: error instanceof Error ? error.message : '重置签到记录失败',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 格式化时间显示
   const formatTime = (dateString: string | null) => {
     if (!dateString) return '--:--';
@@ -128,18 +160,52 @@ export default function WorkHoursTracker() {
             {/* 签到卡片 */}
             <Card className="shadow-lg">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  今日签到
-                </CardTitle>
-                <CardDescription>
-                  {new Date().toLocaleDateString('zh-CN', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric',
-                    weekday: 'long'
-                  })}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="w-5 h-5" />
+                      今日签到
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      {new Date().toLocaleDateString('zh-CN', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric',
+                        weekday: 'long'
+                      })}
+                    </CardDescription>
+                  </div>
+                  {/* 重置按钮 - 放在右上角，不显眼 */}
+                  {todayAttendance && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-muted-foreground hover:text-destructive"
+                          disabled={loading}
+                        >
+                          <RotateCcw className="w-4 h-4 mr-1" />
+                          重置
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>确认重置签到记录？</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            此操作将清除今日的所有签到记录（包括上班和下班时间）。此操作不可恢复，请谨慎操作。
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>取消</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleReset}>
+                            确认重置
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

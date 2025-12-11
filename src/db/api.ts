@@ -120,6 +120,23 @@ export async function clockOut(): Promise<Attendance> {
 }
 
 /**
+ * 重置今日签到记录
+ */
+export async function resetTodayAttendance(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+
+  const { error } = await supabase
+    .from('attendance')
+    .delete()
+    .eq('date', today);
+
+  if (error) {
+    console.error('重置今日签到记录失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 获取历史签到记录（分页）
  */
 export async function getAttendanceHistory(page = 1, pageSize = 10) {
