@@ -120,7 +120,89 @@ export async function clockOut(): Promise<Attendance> {
 }
 
 /**
- * 重置今日签到记录
+ * 重置今日上班签到时间
+ */
+export async function resetClockIn(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+
+  // 获取今日记录
+  const { data: attendance } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('date', today)
+    .maybeSingle();
+
+  if (!attendance) {
+    throw new Error('今日暂无签到记录');
+  }
+
+  // 如果只有上班签到，删除整条记录
+  if (!attendance.clock_out_time) {
+    const { error } = await supabase
+      .from('attendance')
+      .delete()
+      .eq('date', today);
+
+    if (error) {
+      console.error('重置上班签到失败:', error);
+      throw error;
+    }
+  } else {
+    // 如果已有下班签到，只清除上班时间并重新计算工时
+    const { error } = await supabase
+      .from('attendance')
+      .update({
+        clock_in_time: null,
+        work_hours: 0
+      })
+      .eq('date', today);
+
+    if (error) {
+      console.error('重置上班签到失败:', error);
+      throw error;
+    }
+  }
+}
+
+/**
+ * 重置今日下班签到时间
+ */
+export async function resetClockOut(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+
+  // 获取今日记录
+  const { data: attendance } = await supabase
+    .from('attendance')
+    .select('*')
+    .eq('date', today)
+    .maybeSingle();
+
+  if (!attendance || !attendance.clock_out_time) {
+    throw new Error('今日暂无下班签到记录');
+  }
+
+  // 清除下班时间并重新计算工时
+  const clockInTime = attendance.clock_in_time ? new Date(attendance.clock_in_time) : null;
+  const currentWorkHours = clockInTime 
+    ? (new Date().getTime() - clockInTime.getTime()) / (1000 * 60 * 60)
+    : 0;
+
+  const { error } = await supabase
+    .from('attendance')
+    .update({
+      clock_out_time: null,
+      work_hours: Number(currentWorkHours.toFixed(2))
+    })
+    .eq('date', today);
+
+  if (error) {
+    console.error('重置下班签到失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 重置今日签到记录（已废弃，保留用于兼容）
  */
 export async function resetTodayAttendance(): Promise<void> {
   const today = new Date().toISOString().split('T')[0];

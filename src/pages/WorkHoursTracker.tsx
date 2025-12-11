@@ -17,7 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock, LogIn, LogOut, TrendingUp, RotateCcw } from 'lucide-react';
-import { clockIn, clockOut, getTodayAttendance, getWeeklyStats, resetTodayAttendance } from '@/db/api';
+import { clockIn, clockOut, getTodayAttendance, getWeeklyStats, resetClockIn, resetClockOut } from '@/db/api';
 import type { Attendance, WeeklyStats } from '@/types';
 import AttendanceHistory from '@/components/AttendanceHistory';
 
@@ -100,20 +100,41 @@ export default function WorkHoursTracker() {
     }
   };
 
-  // 处理重置签到
-  const handleReset = async () => {
+  // 处理重置上班签到
+  const handleResetClockIn = async () => {
     setLoading(true);
     try {
-      await resetTodayAttendance();
+      await resetClockIn();
       await loadData();
       toast({
         title: '重置成功',
-        description: '今日签到记录已清除',
+        description: '上班签到时间已清除',
       });
     } catch (error) {
       toast({
         title: '重置失败',
-        description: error instanceof Error ? error.message : '重置签到记录失败',
+        description: error instanceof Error ? error.message : '重置上班签到失败',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 处理重置下班签到
+  const handleResetClockOut = async () => {
+    setLoading(true);
+    try {
+      await resetClockOut();
+      await loadData();
+      toast({
+        title: '重置成功',
+        description: '下班签到时间已清除',
+      });
+    } catch (error) {
+      toast({
+        title: '重置失败',
+        description: error instanceof Error ? error.message : '重置下班签到失败',
         variant: 'destructive'
       });
     } finally {
@@ -144,8 +165,7 @@ export default function WorkHoursTracker() {
       <div className="max-w-6xl mx-auto space-y-6">
         {/* 页面标题 */}
         <div className="text-center space-y-2">
-          <h1 className="text-3xl xl:text-4xl font-bold text-foreground">工时统计工具</h1>
-          <p className="text-muted-foreground">记录您的工作时间，提升效率管理</p>
+          <h1 className="text-3xl xl:text-4xl font-bold text-foreground">牛马拉磨统计</h1>
         </div>
 
         {/* 标签页 */}
@@ -160,52 +180,18 @@ export default function WorkHoursTracker() {
             {/* 签到卡片 */}
             <Card className="shadow-lg">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="w-5 h-5" />
-                      今日签到
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      {new Date().toLocaleDateString('zh-CN', { 
-                        year: 'numeric', 
-                        month: 'long', 
-                        day: 'numeric',
-                        weekday: 'long'
-                      })}
-                    </CardDescription>
-                  </div>
-                  {/* 重置按钮 - 放在右上角，不显眼 */}
-                  {todayAttendance && (
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-muted-foreground hover:text-destructive"
-                          disabled={loading}
-                        >
-                          <RotateCcw className="w-4 h-4 mr-1" />
-                          重置
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>确认重置签到记录？</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            此操作将清除今日的所有签到记录（包括上班和下班时间）。此操作不可恢复，请谨慎操作。
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>取消</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleReset}>
-                            确认重置
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  )}
-                </div>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  今日签到
+                </CardTitle>
+                <CardDescription>
+                  {new Date().toLocaleDateString('zh-CN', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -220,14 +206,44 @@ export default function WorkHoursTracker() {
                       </div>
                       <LogIn className="w-8 h-8 text-primary" />
                     </div>
-                    <Button
-                      onClick={handleClockIn}
-                      disabled={loading || !!todayAttendance?.clock_in_time}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {todayAttendance?.clock_in_time ? '已签到' : '上班签到'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleClockIn}
+                        disabled={loading || !!todayAttendance?.clock_in_time}
+                        className="flex-1"
+                        size="lg"
+                      >
+                        {todayAttendance?.clock_in_time ? '已签到' : '上班签到'}
+                      </Button>
+                      {todayAttendance?.clock_in_time && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="lg"
+                              className="text-muted-foreground hover:text-destructive"
+                              disabled={loading}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>确认重置上班签到？</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                此操作将清除今日的上班签到时间。此操作不可恢复，请谨慎操作。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleResetClockIn}>
+                                确认重置
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
 
                   {/* 下班签到 */}
@@ -241,14 +257,44 @@ export default function WorkHoursTracker() {
                       </div>
                       <LogOut className="w-8 h-8 text-primary" />
                     </div>
-                    <Button
-                      onClick={handleClockOut}
-                      disabled={loading || !todayAttendance?.clock_in_time || !!todayAttendance?.clock_out_time}
-                      className="w-full"
-                      size="lg"
-                    >
-                      {todayAttendance?.clock_out_time ? '已签到' : '下班签到'}
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleClockOut}
+                        disabled={loading || !todayAttendance?.clock_in_time || !!todayAttendance?.clock_out_time}
+                        className="flex-1"
+                        size="lg"
+                      >
+                        {todayAttendance?.clock_out_time ? '已签到' : '下班签到'}
+                      </Button>
+                      {todayAttendance?.clock_out_time && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="lg"
+                              className="text-muted-foreground hover:text-destructive"
+                              disabled={loading}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>确认重置下班签到？</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                此操作将清除今日的下班签到时间。此操作不可恢复，请谨慎操作。
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>取消</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleResetClockOut}>
+                                确认重置
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
                 </div>
 
