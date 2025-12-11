@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Clock, LogIn, LogOut, TrendingUp } from 'lucide-react';
 import { clockIn, clockOut, getTodayAttendance, getWeeklyStats } from '@/db/api';
 import type { Attendance, WeeklyStats } from '@/types';
+import AttendanceHistory from '@/components/AttendanceHistory';
 
 export default function WorkHoursTracker() {
   const [todayAttendance, setTodayAttendance] = useState<Attendance | null>(null);
@@ -114,136 +116,152 @@ export default function WorkHoursTracker() {
           <p className="text-muted-foreground">记录您的工作时间，提升效率管理</p>
         </div>
 
-        {/* 签到卡片 */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              今日签到
-            </CardTitle>
-            <CardDescription>
-              {new Date().toLocaleDateString('zh-CN', { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric',
-                weekday: 'long'
-              })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {/* 上班签到 */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">上班时间</p>
+        {/* 标签页 */}
+        <Tabs defaultValue="today" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 max-w-md mx-auto">
+            <TabsTrigger value="today">今日统计</TabsTrigger>
+            <TabsTrigger value="history">历史记录</TabsTrigger>
+          </TabsList>
+
+          {/* 今日统计标签页 */}
+          <TabsContent value="today" className="space-y-6 mt-6">
+            {/* 签到卡片 */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="w-5 h-5" />
+                  今日签到
+                </CardTitle>
+                <CardDescription>
+                  {new Date().toLocaleDateString('zh-CN', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric',
+                    weekday: 'long'
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  {/* 上班签到 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">上班时间</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {formatTime(todayAttendance?.clock_in_time || null)}
+                        </p>
+                      </div>
+                      <LogIn className="w-8 h-8 text-primary" />
+                    </div>
+                    <Button
+                      onClick={handleClockIn}
+                      disabled={loading || !!todayAttendance?.clock_in_time}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {todayAttendance?.clock_in_time ? '已签到' : '上班签到'}
+                    </Button>
+                  </div>
+
+                  {/* 下班签到 */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
+                      <div>
+                        <p className="text-sm text-muted-foreground">下班时间</p>
+                        <p className="text-2xl font-bold text-foreground">
+                          {formatTime(todayAttendance?.clock_out_time || null)}
+                        </p>
+                      </div>
+                      <LogOut className="w-8 h-8 text-primary" />
+                    </div>
+                    <Button
+                      onClick={handleClockOut}
+                      disabled={loading || !todayAttendance?.clock_in_time || !!todayAttendance?.clock_out_time}
+                      className="w-full"
+                      size="lg"
+                    >
+                      {todayAttendance?.clock_out_time ? '已签到' : '下班签到'}
+                    </Button>
+                  </div>
+                </div>
+
+                {/* 今日工时 */}
+                <div className="mt-6 p-4 bg-primary/10 rounded-lg text-center">
+                  <p className="text-sm text-muted-foreground mb-1">今日工时</p>
+                  <p className="text-3xl font-bold text-primary">
+                    {getCurrentWorkHours().toFixed(2)} 小时
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 本周统计 */}
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5" />
+                  本周统计
+                </CardTitle>
+                <CardDescription>周一至周五工时数据</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {/* 统计数据 */}
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
+                  <div className="p-4 bg-secondary/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground mb-1">本周总工时</p>
                     <p className="text-2xl font-bold text-foreground">
-                      {formatTime(todayAttendance?.clock_in_time || null)}
+                      {weeklyStats?.totalHours.toFixed(2) || '0.00'} 小时
                     </p>
                   </div>
-                  <LogIn className="w-8 h-8 text-primary" />
-                </div>
-                <Button
-                  onClick={handleClockIn}
-                  disabled={loading || !!todayAttendance?.clock_in_time}
-                  className="w-full"
-                  size="lg"
-                >
-                  {todayAttendance?.clock_in_time ? '已签到' : '上班签到'}
-                </Button>
-              </div>
-
-              {/* 下班签到 */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-lg">
-                  <div>
-                    <p className="text-sm text-muted-foreground">下班时间</p>
+                  <div className="p-4 bg-secondary/50 rounded-lg text-center">
+                    <p className="text-sm text-muted-foreground mb-1">日均工时</p>
                     <p className="text-2xl font-bold text-foreground">
-                      {formatTime(todayAttendance?.clock_out_time || null)}
+                      {weeklyStats?.averageHours.toFixed(2) || '0.00'} 小时
                     </p>
                   </div>
-                  <LogOut className="w-8 h-8 text-primary" />
                 </div>
-                <Button
-                  onClick={handleClockOut}
-                  disabled={loading || !todayAttendance?.clock_in_time || !!todayAttendance?.clock_out_time}
-                  className="w-full"
-                  size="lg"
-                >
-                  {todayAttendance?.clock_out_time ? '已签到' : '下班签到'}
-                </Button>
-              </div>
-            </div>
 
-            {/* 今日工时 */}
-            <div className="mt-6 p-4 bg-primary/10 rounded-lg text-center">
-              <p className="text-sm text-muted-foreground mb-1">今日工时</p>
-              <p className="text-3xl font-bold text-primary">
-                {getCurrentWorkHours().toFixed(2)} 小时
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+                {/* 柱状图 */}
+                <div className="w-full h-64 xl:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weeklyStats?.dailyHours || []}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis 
+                        dataKey="day" 
+                        stroke="hsl(var(--muted-foreground))"
+                        style={{ fontSize: '12px' }}
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))"
+                        style={{ fontSize: '12px' }}
+                        label={{ value: '工时（小时）', angle: -90, position: 'insideLeft' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{
+                          backgroundColor: 'hsl(var(--card))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number) => [`${value.toFixed(2)} 小时`, '工时']}
+                      />
+                      <Bar 
+                        dataKey="hours" 
+                        fill="hsl(var(--primary))" 
+                        radius={[8, 8, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        {/* 本周统计 */}
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              本周统计
-            </CardTitle>
-            <CardDescription>周一至周五工时数据</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {/* 统计数据 */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-6">
-              <div className="p-4 bg-secondary/50 rounded-lg text-center">
-                <p className="text-sm text-muted-foreground mb-1">本周总工时</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {weeklyStats?.totalHours.toFixed(2) || '0.00'} 小时
-                </p>
-              </div>
-              <div className="p-4 bg-secondary/50 rounded-lg text-center">
-                <p className="text-sm text-muted-foreground mb-1">日均工时</p>
-                <p className="text-2xl font-bold text-foreground">
-                  {weeklyStats?.averageHours.toFixed(2) || '0.00'} 小时
-                </p>
-              </div>
-            </div>
-
-            {/* 柱状图 */}
-            <div className="w-full h-64 xl:h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyStats?.dailyHours || []}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis 
-                    dataKey="day" 
-                    stroke="hsl(var(--muted-foreground))"
-                    style={{ fontSize: '12px' }}
-                  />
-                  <YAxis 
-                    stroke="hsl(var(--muted-foreground))"
-                    style={{ fontSize: '12px' }}
-                    label={{ value: '工时（小时）', angle: -90, position: 'insideLeft' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{
-                      backgroundColor: 'hsl(var(--card))',
-                      border: '1px solid hsl(var(--border))',
-                      borderRadius: '8px'
-                    }}
-                    formatter={(value: number) => [`${value.toFixed(2)} 小时`, '工时']}
-                  />
-                  <Bar 
-                    dataKey="hours" 
-                    fill="hsl(var(--primary))" 
-                    radius={[8, 8, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+          {/* 历史记录标签页 */}
+          <TabsContent value="history" className="mt-6">
+            <AttendanceHistory />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

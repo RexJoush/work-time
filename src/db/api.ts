@@ -120,6 +120,39 @@ export async function clockOut(): Promise<Attendance> {
 }
 
 /**
+ * 获取历史签到记录（分页）
+ */
+export async function getAttendanceHistory(page = 1, pageSize = 10) {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+
+  // 获取总数
+  const { count } = await supabase
+    .from('attendance')
+    .select('*', { count: 'exact', head: true });
+
+  // 获取分页数据
+  const { data, error } = await supabase
+    .from('attendance')
+    .select('*')
+    .order('date', { ascending: false })
+    .range(from, to);
+
+  if (error) {
+    console.error('获取历史记录失败:', error);
+    throw error;
+  }
+
+  return {
+    data: Array.isArray(data) ? data : [],
+    total: count || 0,
+    page,
+    pageSize,
+    totalPages: Math.ceil((count || 0) / pageSize)
+  };
+}
+
+/**
  * 获取本周工时统计（周一到周五）
  */
 export async function getWeeklyStats() {
