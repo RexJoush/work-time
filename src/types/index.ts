@@ -7,7 +7,7 @@ export interface Option {
 
 // 签到记录类型
 export interface Attendance {
-  id: string;
+  id: number;
   date: string;
   clock_in_time: string | null;
   clock_out_time: string | null;
